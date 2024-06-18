@@ -1,0 +1,64 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.ar_model import AutoReg
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import warnings
+warnings.filterwarnings("ignore")
+
+data = pd.read_csv('/content/airline-passengers.csv')
+data.columns = ['Month', 'Passengers']
+data['Month'] = pd.to_datetime(data['Month'])
+data.set_index('Month', inplace=True)
+
+ar_model_1 = AutoReg(data, lags=1).fit()
+ar_model_2 = AutoReg(data, lags=2).fit()
+
+print(ar_model_1.summary())
+print(ar_model_2.summary())
+
+def print_ar_equation(ar_model_fit, model_order):
+    ar_coeffs = ar_model_fit.params
+    equation = f"y(t) = {ar_coeffs[0]:.4f}"
+    for i in range(1, len(ar_coeffs)):
+        equation += f" + {ar_coeffs[i]:.4f}*y(t-{i})"
+    print(f"\nAR({model_order}) Equation:")
+    print(equation)
+
+print_ar_equation(ar_model_1, 1)
+print_ar_equation(ar_model_2, 2)
+
+def calculate_metrics(forecast, actual):
+    mae = mean_absolute_error(actual, forecast)
+    mse = mean_squared_error(actual, forecast)
+    rmse = np.sqrt(mse)
+    return mae, mse, rmse
+
+forecast_1 = ar_model_1.fittedvalues
+mae_1, mse_1, rmse_1 = calculate_metrics(forecast_1, data['Passengers'][1:])
+
+forecast_2 = ar_model_2.fittedvalues
+mae_2, mse_2, rmse_2 = calculate_metrics(forecast_2, data['Passengers'][2:])
+
+print("\nAR(1) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {mae_1:.4f}")
+print(f"Mean Squared Error (MSE): {mse_1:.4f}")
+print(f"Root Mean Squared Error (RMSE): {rmse_1:.4f}")
+
+print("\nAR(2) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {mae_2:.4f}")
+print(f"Mean Squared Error (MSE): {mse_2:.4f}")
+print(f"Root Mean Squared Error (RMSE): {rmse_2:.4f}")
+
+def plot_acf_pacf(residuals, model_order):
+    plt.figure(figsize=(12, 6))
+    plt.subplot(2, 1, 1)
+    plot_acf(residuals, lags=30, ax=plt.gca(), title=f'ACF of AR({model_order}) Residuals')
+    plt.subplot(2, 1, 2)
+    plot_pacf(residuals, lags=30, ax=plt.gca(), title=f'PACF of AR({model_order}) Residuals')
+    plt.tight_layout()
+    plt.show()
+
+plot_acf_pacf(ar_model_1.resid, 1)
+plot_acf_pacf(ar_model_2.resid, 2)
