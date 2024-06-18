@@ -1,0 +1,110 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import warnings
+warnings.filterwarnings("ignore")
+
+# Load the data
+data = pd.read_csv('airline-passengers.csv')
+data.columns = ['Month', 'Passengers']
+data['Month'] = pd.to_datetime(data['Month'])
+data.set_index('Month', inplace=True)
+
+# Plot ACF and PACF for ARMA(1,0,1)
+plt.figure(figsize=(12, 6))
+plt.subplot(2, 1, 1)
+plot_acf(data, lags=30, ax=plt.gca(), title='Autocorrelation Function (ACF) - ARMA(1)')
+plt.subplot(2, 1, 2)
+plot_pacf(data, lags=30, ax=plt.gca(), title='Partial Autocorrelation Function (PACF) - ARMA(1)')
+plt.tight_layout()
+plt.show()
+
+# Fit ARMA(1,0,1) model
+arma1_model = ARIMA(data, order=(1, 0, 1))
+arma1_model_fit = arma1_model.fit()
+
+# Print model summary for ARMA(1,0,1)
+print(arma1_model_fit.summary())
+
+# Get AR and MA coefficients for ARMA(1,0,1)
+ar_coeffs_1 = arma1_model_fit.arparams
+ma_coeffs_1 = arma1_model_fit.maparams
+
+# Construct ARMA(1,0,1) equation
+equation_1 = f"y(t) = {arma1_model_fit.params[0]:.4f}"
+for i in range(1, len(arma1_model_fit.params)):
+    if i <= len(ar_coeffs_1):
+        equation_1 += f" + {arma1_model_fit.params[i]:.4f}*y(t-{i})"
+    else:
+        equation_1 += f" + {arma1_model_fit.params[i]:.4f}*e(t-{i-len(ar_coeffs_1)})"
+
+print("\nARMA(1,0,1) Equation:")
+print(equation_1)
+
+# Forecast using the fitted ARMA(1,0,1) model
+forecast_steps = 5
+forecast_arma1 = arma1_model_fit.forecast(steps=forecast_steps)
+print("Forecasted values (ARMA(1,0,1)):")
+print(forecast_arma1)
+
+# Calculate and print performance metrics for ARMA(1,0,1)
+arma1_forecast = arma1_model_fit.fittedvalues
+arma1_mae = mean_absolute_error(data['Passengers'], arma1_forecast)
+arma1_mse = mean_squared_error(data['Passengers'], arma1_forecast)
+arma1_rmse = np.sqrt(arma1_mse)
+
+print(f"\nARMA(1,0,1) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {arma1_mae:.4f}")
+print(f"Mean Squared Error (MSE): {arma1_mse:.4f}")
+print(f"Root Mean Squared Error (RMSE): {arma1_rmse:.4f}")
+
+# Plot ACF and PACF for ARMA(2,0,1)
+plt.figure(figsize=(12, 6))
+plt.subplot(2, 1, 1)
+plot_acf(data, lags=30, ax=plt.gca(), title='Autocorrelation Function (ACF) - ARMA(2)')
+plt.subplot(2, 1, 2)
+plot_pacf(data, lags=30, ax=plt.gca(), title='Partial Autocorrelation Function (PACF) - ARMA(2)')
+plt.tight_layout()
+plt.show()
+
+# Fit ARMA(2,0,1) model
+arma2_model = ARIMA(data, order=(2, 0, 1))
+arma2_model_fit = arma2_model.fit()
+
+# Print model summary for ARMA(2,0,1)
+print(arma2_model_fit.summary())
+
+# Get AR and MA coefficients for ARMA(2,0,1)
+ar_coeffs_2 = arma2_model_fit.arparams
+ma_coeffs_2 = arma2_model_fit.maparams
+
+# Construct ARMA(2,0,1) equation
+equation_2 = f"y(t) = {arma2_model_fit.params[0]:.4f}"
+for i in range(1, len(arma2_model_fit.params)):
+    if i <= len(ar_coeffs_2):
+        equation_2 += f" + {arma2_model_fit.params[i]:.4f}*y(t-{i})"
+    else:
+        equation_2 += f" + {arma2_model_fit.params[i]:.4f}*e(t-{i-len(ar_coeffs_2)})"
+
+print("\nARMA(2,0,1) Equation:")
+print(equation_2)
+
+# Forecast using the fitted ARMA(2,0,1) model
+forecast_steps = 5
+forecast_arma2 = arma2_model_fit.forecast(steps=forecast_steps)
+print("Forecasted values (ARMA(2,0,1)):")
+print(forecast_arma2)
+
+# Calculate and print performance metrics for ARMA(2,0,1)
+arma2_forecast = arma2_model_fit.fittedvalues
+arma2_mae = mean_absolute_error(data['Passengers'], arma2_forecast)
+arma2_mse = mean_squared_error(data['Passengers'], arma2_forecast)
+arma2_rmse = np.sqrt(arma2_mse)
+
+print(f"\nARMA(2,0,1) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {arma2_mae:.4f}")
+print(f"Mean Squared Error (MSE): {arma2_mse:.4f}")
+print(f"Root Mean Squared Error (RMSE): {arma2_rmse:.4f}")
