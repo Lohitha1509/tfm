@@ -1,0 +1,25 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from statsmodels.tsa.seasonal import seasonal_decompose
+
+data = pd.read_csv('/content/yahoo_stock.csv')
+
+data['Date'] = pd.to_datetime(data['Date'])
+data.set_index('Date', inplace=True)
+
+plt.figure(figsize=(10, 5))
+plt.plot(data['Close'], linestyle='-')
+plt.title('Time Series Plot of Yahoo Stock Closing Prices')
+plt.xlabel('Date')
+plt.ylabel('Closing Price')
+plt.grid(True)
+plt.show()
+
+decomposition = seasonal_decompose(data['Close'], model='multiplicative', period=365)
+fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(12, 10))
+decomposition.observed.plot(ax=ax1, title='Observed')
+decomposition.trend.plot(ax=ax2, title='Trend')
+decomposition.seasonal.plot(ax=ax3, title='Seasonal')
+decomposition.resid.plot(ax=ax4, title='Residual')
+plt.tight_layout()
+plt.show()
