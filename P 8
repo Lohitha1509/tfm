@@ -1,0 +1,77 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import warnings
+warnings.filterwarnings("ignore")
+
+data = pd.read_csv('/content/airline-passengers.csv')
+data.columns = ['Month', 'Passengers']
+data['Month'] = pd.to_datetime(data['Month'])
+data.set_index('Month', inplace=True)
+
+arima_model_1 = ARIMA(data, order=(1, 0, 1)).fit()
+arima_model_2 = ARIMA(data, order=(2, 0, 1)).fit()
+
+print(arima_model_1.summary())
+print(arima_model_2.summary())
+
+def print_arima_equation(arima_model_fit, model_order):
+    params = arima_model_fit.params
+    equation = f"y(t) = {params[0]:.4f}"
+    ar_order, _, ma_order = model_order
+    for i in range(1, ar_order + 1):
+        equation += f" + {params[i]:.4f}*y(t-{i})"
+    for j in range(1, ma_order + 1):
+        equation += f" + {params[ar_order + j]:.4f}*ε(t-{j})"
+    print(f"\nARIMA{model_order} Equation:")
+    print(equation)
+
+print_arima_equation(arima_model_1, (1, 0, 1))
+print_arima_equation(arima_model_2, (2, 0, 1))
+
+def calculate_metrics(forecast, actual):
+    mae = mean_absolute_error(actual, forecast)
+    mse = mean_squared_error(actual, forecast)
+    rmse = np.sqrt(mse)
+    return mae, mse, rmse
+
+forecast_1 = arima_model_1.fittedvalues
+mae_1, mse_1, rmse_1 = calculate_metrics(forecast_1, data['Passengers'])
+
+forecast_2 = arima_model_2.fittedvalues
+mae_2, mse_2, rmse_2 = calculate_metrics(forecast_2, data['Passengers'])
+
+print("\nARIMA(1,0,1) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {mae_1:.4f}")
+print(f"Mean Squared Error (MSE): {mse_1:.4f}")
+print(f"Root Mean Squared Error (RMSE): {rmse_1:.4f}")
+
+print("\nARIMA(2,0,1) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {mae_2:.4f}")
+print(f"Mean Squared Error (MSE): {mse_2:.4f}")
+print(f"Root Mean Squared Error (RMSE): {rmse_2:.4f}")
+
+def plot_acf_pacf(residuals, model_order):
+    plt.figure(figsize=(12, 6))
+    plt.subplot(2, 1, 1)
+    plot_acf(residuals, lags=30, ax=plt.gca(), title=f'ACF of ARIMA{model_order} Residuals')
+    plt.subplot(2, 1, 2)
+    plot_pacf(residuals, lags=30, ax=plt.gca(), title=f'PACF of ARIMA{model_order} Residuals')
+    plt.tight_layout()
+    plt.show()
+
+plot_acf_pacf(arima_model_1.resid, (1, 0, 1))
+plot_acf_pacf(arima_model_2.resid, (2, 0, 1))
+
+def generate_forecasts(arima_model_fit, model_order, steps=12):
+    forecast_values = arima_model_fit.predict(start=len(data), end=len(data) + steps - 1)
+    forecast_index = pd.date_range(start=data.index[-1], periods=steps + 1, freq='M')[1:]
+    forecast_df = pd.DataFrame({'Month': forecast_index, 'Forecast': forecast_values})
+    print(f"\nForecast for the next 12 months for ARIMA{model_order}:")
+    print(forecast_df)
+
+generate_forecasts(arima_model_1, (1, 0, 1))
+generate_forecasts(arima_model_2, (2, 0, 1))
