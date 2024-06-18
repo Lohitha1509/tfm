@@ -1,0 +1,67 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from arch import arch_model
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import warnings
+warnings.filterwarnings("ignore")
+
+data = pd.read_csv('/content/airline-passengers.csv')
+data.columns = ['Month', 'Passengers']
+data['Month'] = pd.to_datetime(data['Month'])
+data.set_index('Month', inplace=True)
+
+garch_model_1_1 = arch_model(data['Passengers'], vol='Garch', p=1, q=1).fit(disp='off')
+garch_model_2_1 = arch_model(data['Passengers'], vol='Garch', p=2, q=1).fit(disp='off')
+
+print(garch_model_1_1.summary())
+print(garch_model_2_1.summary())
+
+def print_garch_equation(garch_model_fit, model_order):
+    params = garch_model_fit.params
+    p, q = model_order
+    equation = f"\sigma^2(t) = {params['omega']:.4f}"
+    for i in range(1, p + 1):
+        equation += f" + {params[f'alpha[{i}]']:.4f}*ε(t-{i})^2"
+    for j in range(1, q + 1):
+        equation += f" + {params[f'beta[{j}]']:.4f}*σ^2(t-{j})"
+    print(f"\nGARCH({p}, {q}) Equation:")
+    print(equation)
+
+print_garch_equation(garch_model_1_1, (1, 1))
+print_garch_equation(garch_model_2_1, (2, 1))
+
+def calculate_metrics(forecast, actual):
+    mae = mean_absolute_error(actual, forecast)
+    mse = mean_squared_error(actual, forecast)
+    rmse = np.sqrt(mse)
+    return mae, mse, rmse
+
+forecast_1_1 = garch_model_1_1.conditional_volatility
+mae_1_1, mse_1_1, rmse_1_1 = calculate_metrics(forecast_1_1, data['Passengers'])
+
+forecast_2_1 = garch_model_2_1.conditional_volatility
+mae_2_1, mse_2_1, rmse_2_1 = calculate_metrics(forecast_2_1, data['Passengers'])
+
+print("\nGARCH(1,1) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {mae_1_1:.4f}")
+print(f"Mean Squared Error (MSE): {mse_1_1:.4f}")
+print(f"Root Mean Squared Error (RMSE): {rmse_1_1:.4f}")
+
+print("\nGARCH(2,1) Model Performance Metrics:")
+print(f"Mean Absolute Error (MAE): {mae_2_1:.4f}")
+print(f"Mean Squared Error (MSE): {mse_2_1:.4f}")
+print(f"Root Mean Squared Error (RMSE): {rmse_2_1:.4f}")
+
+def plot_acf_pacf(residuals, model_order):
+    plt.figure(figsize=(12, 6))
+    plt.subplot(2, 1, 1)
+    plot_acf(residuals, lags=30, ax=plt.gca(), title=f'ACF of GARCH({model_order[0]},{model_order[1]}) Residuals')
+    plt.subplot(2, 1, 2)
+    plot_pacf(residuals, lags=30, ax=plt.gca(), title=f'PACF of GARCH({model_order[0]},{model_order[1]}) Residuals')
+    plt.tight_layout()
+    plt.show()
+
+plot_acf_pacf(garch_model_1_1.resid, (1, 1))
+plot_acf_pacf(garch_model_2_1.resid, (2, 1))
